@@ -1,0 +1,10 @@
+SAMUEL NEUBARDT
+- FRONT END, swing based using clossure 
+	- Basic GUI where users can either add or query IMAGES and VIDEOS or query just using keywords
+	- The GUI will use http standard POST AND GET requests against the server
+
+SAMY VILAR, DAN GARFIELD
+- BACK END, python http server, SQLITE3 with SQLALCHEMY
+	- BASIC SERVER, where images or videos will be received for either querying or insertion.
+	- Text will be recieved for querying
+	- The server will either return Images, Videos, OK, or an error message.
