@@ -43,6 +43,8 @@ def search_by_image():
     try:
         images = search_by_image(filename, source)
         return {'images':images}
+    except Exception as ex:
+        return {'exception':str(ex)}
     
 if __name__ == '__main__':    
     run(host = 'localhost', port = 8080)
