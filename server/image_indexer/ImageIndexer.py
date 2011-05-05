@@ -50,8 +50,8 @@ class ImageIndexer(object):
                 edge_direction_angle = math.degrees(math.atan2(grad_y, grad_x))
                 edge_mask = get_edge_mask(edge_direction_angle, edge_strength) #returns a 3x3 mask in the appropriate direction and strength
         #third step is double threshold hysteresis this is pure magic to me, research more
-         hysteresis(low, high, abra_cadabra, pixie_dust)
-         write_mask(edge_map_data, i, edge_mask) 
+        hysteresis(low, high, abra_cadabra, pixie_dust)
+        write_mask(edge_map_data, i, edge_mask) 
         #finish up
         edge_map.putdata(edge_map_data)
         edge_map.save(filename+"_edgemap", self.img.format)
@@ -85,7 +85,7 @@ class ImageIndexer(object):
         grad_matrix = [-1, 0, 1, -2, 0, 2, -1, 0, 1]
         sum = 0
         for i in range(9):
-            sum + = mask[i]*grad_matrix[i]
+            sum += mask[i]*grad_matrix[i]
         return sum
 
     def get_y_gradient(self, mask):
