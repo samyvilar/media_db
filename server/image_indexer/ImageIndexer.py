@@ -1,14 +1,14 @@
 #this utilizes the Image class of PIL version 1.1.7, for list of dependencies see README
 import Image
 import ImageFilter #must not use ImageFilter.FIND_EDGES. must re-invent wheel. grrrr.
-from math import degrees, atan, sqrt
+import math
 
 #note to self: this should probably just be inheriting from the Image object and adding a couple of methods to it, maybe rewrite later
 class ImageIndexer(object):
     "open images from file and produce histogram and edgemap index for the image"
     def __init__(self, filename):
         self.img = Image.open(filename)
-        self.name = filename
+        self.filename = filename
 
     def getImgInfo(self):
         print "format = %s, size = %s, mode = %s" %(self.img.format, self.img.size, self.img.mode)
@@ -29,32 +29,50 @@ class ImageIndexer(object):
                 hist[key] += 1
         return hist
 
-    def makeEdgeMap(self):
+    def makeEdgeMap(self, thresh_low, thresh_high):
         "returns an edge map found by Canny edge detection"
-        temp_img = self.img.filter(ImageFilter.BLUR) #first apply Gaussian blur to denoise image
-        temp_img = crop_img(temp_img, 3) #crops the image so that its height and width are multiples of n, 3 in this case
+        #first denoise image with Gaussian filter and then crop image to appropriate size for 3x3 mask processing
+        temp_img = self.img.filter(ImageFilter.BLUR) 
+        temp_img = self.crop_img(temp_img, 3)
         temp_img_data = list(temp_img.getdata())
-        edge_map = Image.new(temp_img.mode, temp_img.size)
-        edge_map_data = [] #initially empty, this will be built up as we go
         width = temp_img.size[0]
         height = temp_img.size[1]
-        #second step is to apply non-maximum suppression using a 3x3 mask
-        for rownum in range(1, height, 3): #traverse rows from top to bottom, by 3s, start at row 1 
-            for i in range(1, width, 3): #traverse across row from left to right, by 3s, start at column 1
-                cur_mask = get_mask(temp_img_data, width, rownum, i) #function returns a 3x3 mask centered on pixel i
-                grad_x = get_x_gradient(cur_mask) #function returns a scalar that is the x direction gradient of the mask
-                grad_y = get_y_gradient(cur_mask) #function returns a scalar that is the y direction gradient of the mask
+        edge_map = Image.new(temp_img.mode, temp_img.size)
+        edge_map_data = [0]*(width*height) #initialized to 0's, values will be altered as we go
+        #second step is to apply non-maximum suppression using a flat 3x3 mask
+        for rownum in range(1, height, 3):
+            for i in range(1, width, 3):
+                cur_mask = self.get_mask(temp_img_data, width, rownum, i)
+                grad_x = self.get_x_gradient(cur_mask)
+                grad_y = self.get_y_gradient(cur_mask)
                 edge_strength = int(math.sqrt(grad_x*grad_x + grad_y*grad_y))
                 if edge_strength > 255:
                     edge_strength = 255
                 edge_direction_angle = math.degrees(math.atan2(grad_y, grad_x))
-                edge_mask = get_edge_mask(edge_direction_angle, edge_strength) #returns a 3x3 mask in the appropriate direction and strength
-        #third step is double threshold hysteresis this is pure magic to me, research more
-        hysteresis(low, high, abra_cadabra, pixie_dust)
-        write_mask(edge_map_data, i, edge_mask) 
+                #initial filtering pass rejects very weak edges only (will fill the mask with 0's), 
+                #if strength is above threshold fill edge values only with maximum value in cur_mask and suppress all other pixels to 0
+                if edge_strength < thresh_low:
+                    edge_mask = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                else:
+                    edge_mask = self.generate_edge_mask(cur_mask, edge_direction_angle)
+                #admittedly, this is fuckin hideous. will probably refactor much of this later to avoid such ugliness
+                edge_map_data[(rownum*width-1) + (i-1)] = edge_mask[0]
+                edge_map_data[(rownum*width-1) + i] = edge_mask[1]
+                edge_map_data[(rownum*width-1) + (i+1)] = edge_mask[2]
+                edge_map_data[(rownum*width) + (i-1)] = edge_mask[3]
+                edge_map_data[(rownum*width) + i] = edge_mask[4]
+                edge_map_data[(rownum*width) + (i+1)] = edge_mask[5]
+                edge_map_data[(rownum*width+1) + (i-1)] = edge_mask[6]
+                edge_map_data[(rownum*width+1) + i] = edge_mask[7]
+                edge_map_data[(rownum*width+1) + (i+1)] = edge_mask[8]
+
+
+        #third step is double threshold hysteresis
+        #hysteresis(low, high, abra_cadabra, pixie_dust)
         #finish up
         edge_map.putdata(edge_map_data)
-        edge_map.save(filename+"_edgemap", self.img.format)
+        edge_map.save("edgemap_of_"+self.filename, self.img.format)
+        return "ok"
 
     def crop_img(self, img, n):
         "crops an image so that its width and height are multiples of n, note: this causes a small amount of data loss as the cropped image is slightly smaller"
@@ -96,20 +114,35 @@ class ImageIndexer(object):
             sum += mask[i]*grad_matrix[i]
         return sum
 
-    def get_edge_mask(self, angle, strength):
-        "gets the 3x3 edge mask that corresponds to the given angle and strength"
+    def get_angle_mask(self, angle):
+        "gets the flat 3x3 edge mask that corresponds to the given angle"
         #there are 4 possible masks that can be given here, based on angle
         #they are: up<->down, left<->right, top-left<->bottom-right, top-right<->bottom-left
         if (-22.5 < angle <= 22.5) or (157.5 < angle <= 180) or (-157.5 >= angle >= -180):
-            edge_mask = [0, 0, 0, strength, strength, strength, 0, 0, 0]
+            angle_mask = [0, 0, 0, 1, 1, 1, 0, 0, 0]
         if (22.5 < angle <= 67.5) or (-112.5 >= angle > -157.5):
-            edge_mask = [0, 0, strength, 0, strength, 0, strength, 0, 0]
+            angle_mask = [0, 0, 1, 0, 1, 0, 1, 0, 0]
         if (67.5 < angle <= 112.5) or (-67.5 >= angle > -112.5):
-            edge_mask = [0, strength, 0, 0, strength, 0, 0, strength, 0]
+            angle_mask = [0, 1, 0, 0, 1, 0, 0, 1, 0]
         if (112.5 < angle <= 157.5) or (-22.5 >= angle > -67.5):
-            edge_mask = [strength, 0, 0, 0, strength, 0, 0, 0, strength]
-        return edge_mask
+            angle_mask = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+        return angle_mask
 
+    def get_max(self, lst):
+        "returns the value of the largest element in the list, note, must be iterable object with > defined"
+        max = 0
+        for i in range(len(lst)):
+            if lst[i] > max:
+                max = lst[i]
+        return max
+
+    def generate_edge_mask(self, cur_mask, angle):
+        "returns the flat 3x3 mask with the appropriate angle selected and non-maximum suppression applied"
+        max = self.get_max(cur_mask)
+        edge_mask = self.get_angle_mask(angle)
+        for i in range(len(edge_mask)):
+            edge_mask[i] = edge_mask[i]*max
+        return edge_mask
          
 
 
