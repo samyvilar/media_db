@@ -56,15 +56,16 @@ class ImageIndexer(object):
                 else:
                     edge_mask = self.generate_edge_mask(cur_mask, edge_direction_angle)
                 #admittedly, this is fuckin hideous. will probably refactor much of this later to avoid such ugliness
-                edge_map_data[(rownum*width-1) + (i-1)] = edge_mask[0]
-                edge_map_data[(rownum*width-1) + i] = edge_mask[1]
-                edge_map_data[(rownum*width-1) + (i+1)] = edge_mask[2]
-                edge_map_data[(rownum*width) + (i-1)] = edge_mask[3]
-                edge_map_data[(rownum*width) + i] = edge_mask[4]
-                edge_map_data[(rownum*width) + (i+1)] = edge_mask[5]
-                edge_map_data[(rownum*width+1) + (i-1)] = edge_mask[6]
-                edge_map_data[(rownum*width+1) + i] = edge_mask[7]
-                edge_map_data[(rownum*width+1) + (i+1)] = edge_mask[8]
+                edge_map_data[(rownum*width-1)  + (i-1)] = edge_mask[0]
+                edge_map_data[(rownum*width-1)  + i] = edge_mask[1]
+                edge_map_data[(rownum*width-1)  + (i+1)] = edge_mask[2]
+                edge_map_data[(rownum*width)    + (i-1)] = edge_mask[3]
+                edge_map_data[(rownum*width)    + i] = edge_mask[4]
+                edge_map_data[(rownum*width)    + (i+1)] = edge_mask[5]
+                edge_map_data[(rownum*width+1)  + (i-1)] = edge_mask[6]
+                edge_map_data[(rownum*width+1)  + i] = edge_mask[7]
+                edge_map_data[(rownum*width+1)  + (i+1)] = edge_mask[8]
+                
 
 
         #third step is double threshold hysteresis

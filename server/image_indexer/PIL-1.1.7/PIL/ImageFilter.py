@@ -52,6 +52,8 @@ class Kernel(Filter):
     def filter(self, image):
         if image.mode == "P":
             raise ValueError("cannot filter palette images")
+            print image.filter
+            print self.filterargs
         return apply(image.filter, self.filterargs)
 
 class BuiltinFilter(Kernel):
@@ -247,11 +249,9 @@ class EMBOSS(BuiltinFilter):
 
 class FIND_EDGES(BuiltinFilter):
     name = "Find Edges"
-    filterargs = (3, 3), 1, 0, (
-        -1, -1, -1,
-        -1,  8, -1,
-        -1, -1, -1
-        )
+    filterargs = (3, 3), 1, 0, (-1, -1, -1,
+                                -1,  8, -1,
+                                -1, -1, -1)
 
 ##
 # Simple smoothing filter.
