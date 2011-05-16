@@ -164,7 +164,7 @@ def search_by_image():
 
 @get('/search_by_keyword')
 def search_by_keyword():
-    keyword = request.GET.get('request.GET.get', '')
+    keyword = request.GET.get('keyword', '')
 
     if keyword == '':
         return get_all_images()

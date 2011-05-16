@@ -7,8 +7,7 @@ import math
 
 class ImageIndexer(object):
     "open images from file and produce histogram and edgemap index for the image"
-    def __init__(self, filename):
-        self.source = open(filename, 'rb').read()
+    def __init__(self, filename):        
         self.img = Image.open(filename)
         self.width = self.img.size[0]
         self.height = self.img.size[1]

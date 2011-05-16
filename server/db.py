@@ -1,12 +1,13 @@
 from sqlalchemy     import Table, Column, Integer, Float, String, MetaData, ForeignKey, LargeBinary, create_engine
 from sqlalchemy.orm import sessionmaker, mapper, relationship
 
-import ImageIndexer.ImageIndexer as indx
-import VideoIndexer              as vindx
+import ImageIndexer as indx
+import VideoIndexer as vindx
 import StringIO
 
 import numpy
 import os
+import shutil
 
 class Video(object):
     def __init__(self, filename, source, length, width, height, fps, format, codec):
@@ -68,10 +69,15 @@ class DB(object):
                         Column('image_id',      Integer,        ForeignKey('images.id')),
                         Column('keyword_id',    Integer,        ForeignKey('keywords.id')))
 
+        images_video = Table('images_video', metadata,
+                        Column('image_id',      Integer,        ForeignKey('images.id')),
+                        Column('video_id',      Integer,        ForeignKey('videos.id')))
+
         keywords = Table('keywords', metadata,
                        Column('id',             Integer,        primary_key = True),
                        Column('keyword',        String,         nullable = False, unique = True),
                        Column('frequency',      Integer,        nullable = False))
+
                        
         videos = Table('videos', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
@@ -81,7 +87,8 @@ class DB(object):
                        Column('width',          Integer,        nullable = True ),
                        Column('height',         Integer,        nullable = True ),
                        Column('fps',            Float,          nullable = True ),
-                       Column('codec',          String,         nullable = True ))
+                       Column('codec',          String,         nullable = True ),
+                       )
 
         images = Table('images', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
@@ -98,8 +105,8 @@ class DB(object):
                        Column('format',         String,         nullable = True ),                       
                        )
             
-        mapper(Image,   images, properties = {'video':relationship(Video, backref = 'images'),
-                                              'keywords': relationship(Keyword, secondary=image_keywords, backref='images')})
+        mapper(Image,   images, properties = {'video'   : relationship(Video,   secondary = images_video,   backref = 'images'),
+                                              'keywords': relationship(Keyword, secondary = image_keywords, backref = 'images')})
         mapper(Video,   videos)
         mapper(Keyword, keywords)
 
@@ -174,10 +181,10 @@ class DB(object):
         stats['format'] =       props['ID_VIDEO_FORMAT']    if 'ID_VIDEO_FORMAT' in props else None
         stats['codec']  =       props['ID_VIDEO_CODEC']     if 'ID_VIDEO_CODEC'  in props else None
 
-        stats['scenes'] = indexer.sceneSearch(50)
+        stats['scenes'] = [(scene.filename, open(scene.filename, 'rb').read()) for scene in indexer.sceneSearch(50)]
 
         os.remove(os.path.join(os.getcwd(), filename))
-        os.removedirs(os.path.join(od.getcwd(), filename + '_frames'))
+        shutil.rmtree(os.path.join(os.getcwd(), filename + '_frames'))
 
         return stats                        
 
@@ -212,7 +219,7 @@ class DB(object):
         elif len(keyword_obj) == 1:
             if keyword_obj[0] not in image.keywords: image.keywords.append(keyword_obj[0])
             keyword_obj[0].frequency += 1
-            if image not in keyword.images: keyword.images.append(image)
+            if image not in keyword_obj[0].images: keyword_obj[0].images.append(image)
         else:
             raise Exception("Multiple keywords found! " + keyword_obj)
             
@@ -230,7 +237,7 @@ class DB(object):
 
 
     def add_image(self, filename, source, title = None, description = None, video = None):
-        assert filename != '' and srouce != ''
+        assert filename != '' and source != ''
                 
         stats = self.get_image_stats(source)
 
@@ -249,13 +256,13 @@ class DB(object):
     def add_video(self, filename, source, title = None, description = None):
         assert filename != '' and source != ''
 
-        stats = self.get_video_stats(source)
-        video = Video(filename, buffer(source), stats['width'], stats['height'], stats['fps'], stats['format'], stats['codec'])
+        stats = self.get_video_stats(filename, source)
+        video = Video(filename, buffer(source), stats['length'], stats['width'], stats['height'], stats['fps'], stats['format'], stats['codec'])
         self.session.add(video)
         self.session.commit()
 
-        for scene in self.stats['scenes']:
-            props = self.add_image(scene.filename, scene.source, title, description, video)
+        for scene in stats['scenes']:
+            props = self.add_image(scene[0], scene[1], title, description, video)
             video.images.append(props['image'])
             self.session.commit()
 
