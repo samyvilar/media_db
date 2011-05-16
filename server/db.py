@@ -1,14 +1,23 @@
-from sqlalchemy import Table, Column, Integer, String, MetaData, ForeignKey, LargeBinary, create_engine
+from sqlalchemy     import Table, Column, Integer, Float, String, MetaData, ForeignKey, LargeBinary, create_engine
 from sqlalchemy.orm import sessionmaker, mapper, relationship
 
 import ImageIndexer.ImageIndexer as indx
+import VideoIndexer              as vindx
 import StringIO
 
 import numpy
+import os
 
 class Video(object):
-    def __init__(self, source):        
+    def __init__(self, filename, source, length, width, height, fps, format, codec):
+        self.filename       = filename
         self.source         = source
+        self.length         = length
+        self.width          = width
+        self.height         = height
+        self.fps            = fps
+        self.format         = format
+        self.codec          = codec
         
         
 class Image(object):
@@ -63,10 +72,16 @@ class DB(object):
                        Column('id',             Integer,        primary_key = True),
                        Column('keyword',        String,         nullable = False, unique = True),
                        Column('frequency',      Integer,        nullable = False))
-
+                       
         videos = Table('videos', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
-                       Column('source',         LargeBinary,    nullable = True))
+                       Column('filename',       String,         nullable = False),
+                       Column('source',         LargeBinary,    nullable = False),
+                       Column('length',         Float,          nullable = True ),
+                       Column('width',          Integer,        nullable = True ),
+                       Column('height',         Integer,        nullable = True ),
+                       Column('fps',            Float,          nullable = True ),
+                       Column('codec',          String,         nullable = True ))
 
         images = Table('images', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
@@ -83,7 +98,8 @@ class DB(object):
                        Column('format',         String,         nullable = True ),                       
                        Column('video',          Integer,        ForeignKey('videos.id'), nullable = True))
             
-        mapper(Image,   images, properties = {'videos':relationship(Video), 'keywords': relationship(Keyword, secondary=image_keywords, backref='images')})
+        mapper(Image,   images, properties = {'video':relationship(Video, backref = 'images'),
+                                              'keywords': relationship(Keyword, secondary=image_keywords, backref='images')})
         mapper(Video,   videos)
         mapper(Keyword, keywords)
 
@@ -144,6 +160,28 @@ class DB(object):
         return stats
 
 
+    def get_video_stats(self, filename, source):
+        open(filename, 'wb').write(source)
+
+        indexer = vindx.VideoIndexer(filename)        
+        props   = dict((entry.split('=')[0], entry.split('=')[1]) for entry in indexer.vidinfo if entry != '')
+
+        stats = {}        
+        stats['length'] = float(props['ID_LENGTH'])         if 'ID_LENGTH'       in props else None
+        stats['width']  = int(  props['ID_VIDEO_WIDTH'])    if 'ID_VIDEO_WIDTH'  in props else None
+        stats['height'] = int(  props['ID_VIDEO_HEIGHT'])   if 'ID_VIDEO_HEIGHT' in props else None
+        stats['fps']    = float(props['ID_VIDEO_FPS'])      if 'ID_VIDEO_FPS'    in props else None
+        stats['format'] =       props['ID_VIDEO_FORMAT']    if 'ID_VIDEO_FORMAT' in props else None
+        stats['codec']  =       props['ID_VIDEO_CODEC']     if 'ID_VIDEO_CODEC'  in props else None
+
+        stats['scenes'] = indexer.sceneSearch(50)
+
+        os.remove(os.path.join(os.getcwd(), filename))
+        os.removedirs(os.path.join(od.getcwd(), filename + '_frames'))
+
+        return stats                        
+
+
     def get_keywords(self, string):
         keywords = []
         temp = ''
@@ -155,8 +193,7 @@ class DB(object):
             else:
                 keywords.append(temp)
                 temp = ''
-        if temp != '':
-            keywords.append(temp)
+        if temp != '': keywords.append(temp)
         return [keyword for keyword in keywords if keyword != '']
 
 
@@ -192,23 +229,37 @@ class DB(object):
         return len(keywords)            
 
 
-    def add_image(self, filename, source, title = None, description = None):
-        assert filename != ''
-        assert source   != ''
+    def add_image(self, filename, source, title = None, description = None, video = None):
+        assert filename != '' and srouce != ''
                 
         stats = self.get_image_stats(source)
 
         image = Image(filename, title, description, buffer(source), buffer(numpy.asarray(stats['edge_map']).tostring()),
             buffer(numpy.asarray(stats['hist']).tostring()), stats['hash'], stats['width'], stats['height'], stats['mode'], stats['format'])
-            
+
+        if video != None: image.video.append(video)
         self.session.add(image)        
         self.session.commit()        
 
         keyword_count = self.add_keywords(image)
         self.add_image_hash(image)
 
-        return {'id':image.id, 'keyword_count':keyword_count}
+        return {'id':image.id, 'keyword_count':keyword_count, 'image':image}
 
+    def add_video(self, filename, source, title = None, description = None):
+        assert filename != '' and source != ''
+
+        stats = self.get_video_stats(source)
+        video = Video(filename, buffer(source), stats['width'], stats['height'], stats['fps'], stats['format'], stats['codec'])
+        self.session.add(video)
+        self.session.commit()
+
+        for scene in self.stats['scenes']:
+            props = self.add_image(scene.filename, scene.source, title, description, video)
+            video.images.append(props['image'])
+            self.session.commit()
+
+        return {'id':video.id, 'video':video}
 
     def delete_image(self, id):
         image = self.session.query(Image).filter(Image.id == int(id)).all()[0]
@@ -223,7 +274,7 @@ class DB(object):
         image.title         = title
         image.description   = description
 
-        if image.source != source:
+        if image.source != source and source != '':
             stats           = self.get_image_stats(source)
             image.source    = source
             image.edge_map  = buffer(numpy.asarray(stats['edge_map']).tostring())

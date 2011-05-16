@@ -96,7 +96,8 @@ class VideoIndexer(object):
                 window_size = window_size*2.0
                 window_end = window_start + window_size
             else: #window found a scene boundary, record start of window and move window forward and reset for next loop
-                scene_change_times.append(window_start)
+                #scene_change_times.append(window_start)
+                scene_change_times.append(start_frame) # I need the frames to put them in the database ...
                 window_start = window_end
                 window_size = 1.0
                 window_end = window_start + window_size

@@ -16,16 +16,24 @@ def verify_image_id(id):
 
     return image[0]
 
-# GET, DELETE AND UPDATE SINGLE IMAGE ##########################################
-@post('/add_image')
-def add_image():     
-    filename    = request.forms.get('filename', '')
-    source      = request.files.get('source', '')
+def get_file_name_source(request):
+    return (request.forms.get('filename', ''), request.files.get('source', '').file.read())
 
+def verify_filename_source(filename, source):
     if filename == '': return {'exception':'(add_image)A file name is required! received ""'}
     if source == ''  : return {'exception':'(add_image)A file source is required!'}
+    return True
+    
 
-    source      = source.file.read()
+# GET, DELETE AND UPDATE SINGLE IMAGE ##########################################
+@post('/add_image')
+def add_image():
+    filename, source = get_file_name_source(request)
+
+    status = verify_filename_source(filename, source)
+    if type(status) == type({}):
+        return status
+        
     title       = request.forms.get('title', '')
     description = request.forms.get('description', '')
 
@@ -51,14 +59,15 @@ def delete_image():
 
 
 @post('/update_image')
-def update_image():
+def update_image(): # This is method hasn't being fully thought out ...
     image_id = request.GET.get('image_id', '')
 
     image = verify_image_id(image_id)
     if type(image) == type({}): return image
+    
 
-    filename    = request.forms.get('filename', '')        
-    source      = source.file.read() if source != '' else ''
+    filename, source = get_file_name_source(request)
+
     title       = request.forms.get('title', '')
     description = request.forms.get('description', '')
 
@@ -135,12 +144,12 @@ def get_image_edge_source():
 @get('/get_all_images')
 def get_all_images():
     images = db.get_all_images()
-    return {'images':[{'id':image, 'filename':image.filename, 'title':image.title, 'description':image.description} for image in images]}
+    return {'images':[{'id':image, 'filename':image.filename, 'title':image.title, 'description':image.description, 'keywords':[keyword.keyword for keyword in image.keywords]} for image in images]}
 ################################################################################
 
 @post('/search_by_image')
 def search_by_image():    
-    source = request.files.get('source')
+    source = request.files.get('source', '')
 
     if source == ''  : return {'exception':'(add_image)A file source is required!'}
 
@@ -167,6 +176,27 @@ def search_by_keyword():
     except Exception as ex:
         return {'exception':str(ex)}
 
+@post('/add_video')
+def add_video():
+    filename, source = get_file_name_source(request)
+
+    status = verify_filename_source(filename, source)
+    if type(status) == type({}):
+        return status
+    
+    title       = request.forms.get('title', '')
+    description = request.forms.get('description', '')
+
+    try:
+        props = db.add_video(filename, source, title, description)
+        return {'message':'Successfully added image', 'id':props.video_id}
+    except Exception as ex:
+        return {'exception':str(ex)}
+
+
+
+
+    
 
 if __name__ == '__main__':    
     run(host = 'localhost', port = 8080)
