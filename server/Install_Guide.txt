@@ -1,0 +1,11 @@
+1. List of Dependencies
+
+Unix/Linux operating system.
+Python Interpreter version 2.6 or 2.7. Built-in modules os, math, and subprocess must be available.
+Python Imaging Library (PIL) must be available. For ease of use it should be installed into the Python Interpreter. Alternatively it can be available as a local source code directory. Within PIL the modules Image and ImageFilter are utilized. 
+FFmpeg must be installed on the server. The VideoIndexer module utilizes shell calls to ffmpeg through subprocess. 
+Mplayer must be installed on the server. This is used by the midentify.sh script which is called by VideoIndexer. 
+
+2. ImageIndexer.py and VideoIndexer.py implement an API for python that can be utilized within other python programs to process single images or video clips. The code is reasonably well documented in the source file. Please send additional questions to the author at dbgarf@gmail.com
+
+
