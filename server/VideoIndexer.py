@@ -1,3 +1,5 @@
+__author__="Daniel Garfield"
+
 import ImageIndexer
 import subprocess
 import os

@@ -1,5 +1,4 @@
 __author__ = "Daniel Garfield"
-__date__="$May 14, 2011 5:36:00PM$"
 
 #this utilizes the Image class of PIL version 1.1.7, for list of dependencies see README
 import Image
