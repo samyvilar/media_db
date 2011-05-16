@@ -130,6 +130,12 @@ def get_image_edge_source():
     header['Content-Length']        = len(body.getvalue())
 
     return HTTPResponse(body.getvalue(), header = header)
+
+
+@get('/get_all_images')
+def get_all_images():
+    images = db.get_all_images()
+    return {'images':[{'id':image, 'filename':image.filename, 'title':image.title, 'description':image.description} for image in images]}
 ################################################################################
 
 @post('/search_by_image')
@@ -149,10 +155,13 @@ def search_by_image():
 
 @get('/search_by_keyword')
 def search_by_keyword():
-    keyword = request.GET.get('request.GET.get')
+    keyword = request.GET.get('request.GET.get', '')
+
+    if keyword == '':
+        return get_all_images()
 
     try:
-        results = db.search_by_keyword(keyword)
+        results = db.search_by_keywords(keyword)
 
         return {'images':results['images'], 'videos':results['videos']}
     except Exception as ex:

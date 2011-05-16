@@ -34,8 +34,9 @@ class Image(object):
 
 
 class Keyword(object):
-    def __init__(self, keyword):        
+    def __init__(self, keyword, frequency):
         self.keyword = keyword
+        self.frequency = frequency
 
     def __eq__(self, other):
         assert(type(self) == type(other))
@@ -60,7 +61,8 @@ class DB(object):
 
         keywords = Table('keywords', metadata,
                        Column('id',             Integer,        primary_key = True),
-                       Column('keyword',        String,         nullable = False, unique = True))
+                       Column('keyword',        String,         nullable = False, unique = True),
+                       Column('frequency',      Integer,        nullable = False))
 
         videos = Table('videos', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
@@ -165,13 +167,14 @@ class DB(object):
     def add_keyword(self, keyword, image):        
         keyword_obj = self.get_keyword(keyword)
         if len(keyword_obj) == 0:
-            temp = Keyword(keyword)
+            temp = Keyword(keyword, 1)
             self.session.add(temp)
             self.session.commit()
             temp.images.append(image)            
             image.keywords.append(temp)            
         elif len(keyword_obj) == 1:
             if keyword_obj[0] not in image.keywords: image.keywords.append(keyword_obj[0])
+            keyword_obj[0].frequency += 1
             if image not in keyword.images: keyword.images.append(image)
         else:
             raise Exception("Multiple keywords found! " + keyword_obj)
@@ -241,6 +244,9 @@ class DB(object):
     def get_image(self, id):
         return self.session.query(Image).filter(Image.id == int(id)).all()
 
+    def get_all_images(self):
+        return self.session.query(Image).all()
+
 
     def search_by_image(self, source):
         stats  = self.get_image_stats(source)
@@ -248,10 +254,15 @@ class DB(object):
         return sorted(images, key = lambda image: numpy.sum(abs(numpy.asarray(stats['edge_map']) - numpy.fromstring(image.edge_map, dtype = 'int'))))
 
 
-    def search_by_keyword(self, keyword):
-        raise Exception("Function has yet to be fully implemented!")
-    
-        keywords = keyword.strip().split(' ')
+    def search_by_keywords(self, allkeywords):
+        keywords = sorted([self.get_keyword(keyword)[0] for keyword in self.get_keywords(allkeywords) if self.get_keyword(keyword) != []],
+                            key = lambda keyword: keyword.frequency, reverse = True)
+        images = []
+        images.extend([image for keyword in keywords for image in keyword.images if image not in images])
+
+        return images
+
+
 
         
 
