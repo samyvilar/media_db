@@ -96,7 +96,7 @@ class DB(object):
                        Column('height',         Integer,        nullable = True ),
                        Column('mode',           String,         nullable = True ),
                        Column('format',         String,         nullable = True ),                       
-                       Column('video',          Integer,        ForeignKey('videos.id'), nullable = True))
+                       )
             
         mapper(Image,   images, properties = {'video':relationship(Video, backref = 'images'),
                                               'keywords': relationship(Keyword, secondary=image_keywords, backref='images')})
