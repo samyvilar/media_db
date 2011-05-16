@@ -52,8 +52,9 @@ class ImageIndexer(object):
                     edge_map_data[rownum*width + i] = 0
         #finish up
         edge_map.putdata(edge_map_data)
-        edge_map.save("edgemap_of_"+self.filename, self.img.format)
-        return "ok"
+        self.edge_map = edge_map
+        #edge_map.save("edgemap_of_"+self.filename, self.img.format)
+        
 
    
     def get_mask(self, img_data, width, rownum, i):
