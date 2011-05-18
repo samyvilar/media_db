@@ -223,7 +223,7 @@ def search_by_image():
     source      = source.file.read()
 
     try:
-        images = search_by_image(source)
+        images = db.search_by_image(source)
         return {'images':[get_image_dict(image) for image in images]}
     except Exception as ex:
         return {'exception':str(ex)}
