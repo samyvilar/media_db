@@ -44,38 +44,63 @@ class ImageIndexer(object):
         return "ok"
 
     
-    def makeHistogram(self):
-        "returns a 16 bin histogram of the image, grayscale images return a single band hist, RGB returns a 3 band hist"
-        if self.img.mode =="L":
-            hist = {}
-            vals_vector = list(self.img.getdata())
-            for value in vals_vector:
-                key = value%16
-                try:
+    def makeHistogram(self, type="dict"):
+        "returns a 16 bin histogram of the image, grayscale images return a single band hist, RGB returns a 3 band hist, by default returns a py dict, can also return a flat list if type parameter is set to list"
+        vals_vector = list(self.img.getdata())
+        if type=="list": #in list mode the object returned is a list of len 16 where each index of the list is one of the 16 bins. for grayscale images each bin contains a single int, for color images each bin contains a tuple (r, g, b). list mode may have higher performance then dict mode.
+            if self.img.mode=="L":
+                hist = [0]*16
+                for value in vals_vector:
+                    key = value/16
                     hist[key] += 1
-                except KeyError:
-                    hist[key] = 1
-            return hist
-        elif self.img.mode =="RGB":
-            hist_r = {}
-            hist_g = {}
-            hist_b = {}
-            vals_vector = list(self.img.getdata())
-            for value in vals_vector:
-                key_r = value[0]%16
-                key_g = value[1]%16
-                key_b = value[2]%16
-                try:
-                    hist_r[key_r] += 1
-                    hist_g[key_g] += 1
-                    hist_b[key_b] += 1
-                except KeyError:
-                    hist_r[key_r] = 1
-                    hist_g[key_g] = 1
-                    hist_b[key_b] = 1
-            return (hist_r, hist_g, hist_b)
-        else:
-            return "something broke in makeHistogram"
+                return hist
+            if self.img.mode=="RGB":
+                hist = [(0, 0, 0)]*16
+                for value in vals_vector:
+                    key_r = value[0]/16
+                    key_g = value[1]/16
+                    key_b = value[2]/16
+                    tmp = hist[key_r]
+                    tmp = (tmp[0]+1, tmp[1], tmp[2]) 
+                    hist[key_r] = tmp
+                    tmp = hist[key_g]
+                    tmp = (tmp[0], tmp[1]+1, tmp[2])
+                    hist[key_r] = tmp
+                    tmp = hist[key_b]
+                    tmp = (tmp[0], tmp[1], tmp[2]+1)
+                    hist[key_b] = tmp
+                return hist
+            else:
+                return "something broke in makeHistogram"
+        else:  #in the default mode the object returned is a dictionary with 16 keys (0...15) as the bins. for grayscale images only one dictionary is returned. for color images a tuple of dictionaries is returned (hist_r, hist_g, hist_b)
+            if self.img.mode =="L":
+                hist = {}
+                for value in vals_vector:
+                    key = value/16
+                    try:
+                        hist[key] += 1
+                    except KeyError:
+                        hist[key] = 1
+                return hist
+            elif self.img.mode =="RGB":
+                hist_r = {}
+                hist_g = {}
+                hist_b = {}
+                for value in vals_vector:
+                    key_r = value[0]/16
+                    key_g = value[1]/16
+                    key_b = value[2]/16
+                    try:
+                        hist_r[key_r] += 1
+                        hist_g[key_g] += 1
+                        hist_b[key_b] += 1
+                    except KeyError:
+                        hist_r[key_r] = 1
+                        hist_g[key_g] = 1
+                        hist_b[key_b] = 1
+                return (hist_r, hist_g, hist_b)
+            else:
+                return "something broke in makeHistogram"
 
     def makeEdgeMap(self, thresh):
         "creates an edge map with single threshold filtering. edges are at minimum stronger then thresh"
