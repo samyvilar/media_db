@@ -138,7 +138,7 @@ class DB(object):
 
     def get_hist(self, values, size = 16):
         hist = [0 for x in xrange(size)]
-        for value in values: hist[value % size] += 1 # 44% faster than what found in the ImageIndexer ...
+        for value in values: hist[value / size] += 1 # 44% faster than what found in the ImageIndexer ...
         return hist
 
 
