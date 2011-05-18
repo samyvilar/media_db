@@ -255,7 +255,7 @@ def add_video():
 
     try:
         props = db.add_video(filename, source, title, description)
-        return {'message':'Successfully added image', 'id':props['id']}
+        return {'message':'Successfully added video', 'id':props['id']}
     except Exception as ex:
         return {'exception':str(ex)}
 

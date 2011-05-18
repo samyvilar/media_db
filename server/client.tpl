@@ -34,16 +34,30 @@
 
 
         <br><br>
-      <table>          
+      <table>
         <caption>Images</caption>
-        <thead><tr><td>id</td><td>thumbnail</td><td>filename</td><td>title</td><td>description</td><td>dimension</td><td>format</td></tr></thead>
+        <thead><tr><td>id</td><td>thumbnail</td><td>filename</td><td>title</td><td>description</td><td>dimension</td><td>format</td><td>download</td></tr></thead>
+        <tbody>
         %for image in context['images']:
         <tr><td>{{image.id}}</td><td><img src="/get_image_thumbnail_source?image_id={{image.id}}"</td><td>{{image.filename}}</td>
             <td>{{image.title}}</td><td>{{image.description}}</td><td>({{image.width}}, {{image.height}})</td>
             <td>{{image.format}}</td><td><a href="/get_image_source?image_id={{image.id}}">download</a></td></tr>
         %end
+        </tbody>
       </table>
 
+      <br><br>
+      <table>
+          <caption>Videos</caption>
+          <thead><tr><td>id</td><td>filename</td><td>length</td><td>dimensions</td><td>fps</td><td>format</td><td>codec</td><td>download</td></tr></thead>
+          <tbody>
+           %for video in context['videos']:
+            <tr><td>{{video.id}}</td><td>{{video.filename}}</td><td>{{video.length}}</td>
+                <td>({{video.width}}, {{video.height}})</td><td>{{video.fps}}</td><td>{{video.format}}</td>
+                <td>{{video.codec}}</td><td><a href="/get_video_source?video_id={{video.id}}">download</a></td></tr>
+            %end
+          </tbody>
+      </table>
 
 
       </center>
