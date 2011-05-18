@@ -9,6 +9,12 @@
   </head>
   <body>
       <center>
+
+      <form method="get" action="/search_by_keyword" />
+        <input type="text" name="keyword" />
+        <input type="submit" value="search" />
+      </form>
+
       <form method="post" action="/add_image" enctype="multipart/form-data">
           <table>
               <caption>Upload Image</caption>
