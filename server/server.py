@@ -288,7 +288,9 @@ def get_video_source():
 @get('/')
 def main():
     images = db.get_all_images()
-    return template('client', context = {})
+    videos = db.get_all_videos()
+
+    return template('client', context = {'images':images, 'videos':videos})
     
 
 
