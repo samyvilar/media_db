@@ -50,14 +50,15 @@ def add_image():
 
     status = verify_filename_source(filename, source)
     if type(status) == type({}):
-        return status
+        return status    
         
     title       = request.forms.get('title', '')
     description = request.forms.get('description', '')
 
+    print filename, len(source)
     try:
         props = db.add_image(filename, source, title, description)
-        return {'message':'Successfully added image.', 'id':props.image_id, 'keyword_count':props.keyword_count}
+        return {'message':'Successfully added image.', 'id':props['id'], 'keyword_count':props['keyword_count']}
     except Exception as ex:
         return {'exception':str(ex)}
 
@@ -254,7 +255,7 @@ def add_video():
 
     try:
         props = db.add_video(filename, source, title, description)
-        return {'message':'Successfully added image', 'id':props.video_id}
+        return {'message':'Successfully added image', 'id':props['id']}
     except Exception as ex:
         return {'exception':str(ex)}
 
@@ -283,7 +284,6 @@ def get_video_source():
 
     return HTTPResponse(body.getvalue(), header = header)
 
-    
 
 @get('/')
 def main():
