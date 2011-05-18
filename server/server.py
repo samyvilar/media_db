@@ -224,7 +224,7 @@ def search_by_image():
 
     try:
         images = db.search_by_image(source)
-        return {'images':[get_image_dict(image) for image in images]}
+        return {'images':[get_image_dict(image) for image in images], 'videos':[get_video_dict(image.video[0]) for image in images if len(image.video) > 0]}
     except Exception as ex:
         return {'exception':str(ex)}
 
@@ -238,7 +238,7 @@ def search_by_keyword():
     try:
         results = db.search_by_keywords(keyword)
 
-        return {'images':[get_image_dict(image) for image in results['images']], 'videos':[get_video_dict(video) for video in results['videos']]}
+        return {'videos':[get_video_dict(video) for video in results['videos']], 'images':[get_image_dict(image) for image in results['images']]}
     except Exception as ex:
         return {'exception':str(ex)}
 
@@ -282,7 +282,7 @@ def get_video_source():
     header = get_header(video)
     body = video.source
 
-    return HTTPResponse(body.getvalue(), header = header)
+    return HTTPResponse(body, header = header)
 
 
 @get('/')

@@ -333,8 +333,17 @@ class DB(object):
         images = []
         videos = []
 
-        images.extend([image for keyword in keywords for image in keyword.images if image not in images])
-        videos.extend([image.video for image in images if len(image.video) > 0])
+
+        #images.extend([image for keyword in keywords for image in keyword.images if image not in images])
+        for keyword in keywords:
+            for image in keyword.images:
+                if image not in images:
+                    images.append(image)        
+
+        #videos.extend([image.video[0] for image in images if len(image.video) > 0 and image.video[0] not in videos])
+        for image in images:
+            if len(image.video) > 0 and image.video[0] not in videos: videos.append(image.video[0])
+
 
         return {'images':images, 'videos':videos}
 
