@@ -61,13 +61,13 @@ class ImageIndexer(object):
                     key_g = value[1]/16
                     key_b = value[2]/16
                     tmp = hist[key_r]
-                    tmp = (tmp[0]+1, 0, 0) 
+                    tmp = (tmp[0]+1, tmp[1], tmp[2]) 
                     hist[key_r] = tmp
                     tmp = hist[key_g]
-                    tmp = (0, tmp[1]+1, 0)
+                    tmp = (tmp[0], tmp[1]+1, tmp[2])
                     hist[key_r] = tmp
                     tmp = hist[key_b]
-                    tmp = (0, 0, tmp[2]+1)
+                    tmp = (tmp[0], tmp[1], tmp[2]+1)
                     hist[key_b] = tmp
                 return hist
             else:
