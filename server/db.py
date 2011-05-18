@@ -77,7 +77,6 @@ class DB(object):
                        Column('id',             Integer,        primary_key = True),
                        Column('keyword',        String,         nullable = False, unique = True),
                        Column('frequency',      Integer,        nullable = False))
-
                        
         videos = Table('videos', metadata,
                        Column('id',             Integer,        primary_key = True, autoincrement = True),
@@ -87,6 +86,7 @@ class DB(object):
                        Column('width',          Integer,        nullable = True ),
                        Column('height',         Integer,        nullable = True ),
                        Column('fps',            Float,          nullable = True ),
+                       Column('format',         String,         nullable = True ),
                        Column('codec',          String,         nullable = True ),
                        )
 
@@ -166,11 +166,15 @@ class DB(object):
 
         return stats
 
+    def get_video(self, id):
+        return self.session.query(Video).filter(Video.id == int(id)).all()
+
 
     def get_video_stats(self, filename, source):
-        open(filename, 'wb').write(source)
+        file = os.path.join(os.getcwd(), filename)
+        open(file, 'wb').write(source)
 
-        indexer = vindx.VideoIndexer(filename)        
+        indexer = vindx.VideoIndexer(filename)
         props   = dict((entry.split('=')[0], entry.split('=')[1]) for entry in indexer.vidinfo if entry != '')
 
         stats = {}        
@@ -181,15 +185,16 @@ class DB(object):
         stats['format'] =       props['ID_VIDEO_FORMAT']    if 'ID_VIDEO_FORMAT' in props else None
         stats['codec']  =       props['ID_VIDEO_CODEC']     if 'ID_VIDEO_CODEC'  in props else None
 
-        stats['scenes'] = [(scene.filename, open(scene.filename, 'rb').read()) for scene in indexer.sceneSearch(50)]
+        stats['scenes'] = [(scene.filename.split('/')[-1], open(scene.filename, 'rb').read()) for scene in indexer.sceneSearch(50)]
 
         os.remove(os.path.join(os.getcwd(), filename))
-        shutil.rmtree(os.path.join(os.getcwd(), filename + '_frames'))
+        shutil.rmtree(os.getcwd() + "/" + filename.split(".")[0] + "_frames")
 
         return stats                        
 
 
     def get_keywords(self, string):
+        if string == '' or string == None: return []
         keywords = []
         temp = ''
         for ch in string:
@@ -205,10 +210,11 @@ class DB(object):
 
 
     def get_keyword(self, keyword):
-        return self.session.query(Keyword).filter(Keyword.keyword == keyword).all()
+        return self.session.query(Keyword).filter(Keyword.keyword == keyword.lower()).all()
 
 
-    def add_keyword(self, keyword, image):        
+    def add_keyword(self, keyword, image):
+        keyword = keyword.lower()
         keyword_obj = self.get_keyword(keyword)
         if len(keyword_obj) == 0:
             temp = Keyword(keyword, 1)
@@ -232,6 +238,7 @@ class DB(object):
         keywords.extend(self.get_keywords(image.description))
         
         for keyword in keywords: self.add_keyword(keyword, image)
+
         
         return len(keywords)            
 
@@ -242,7 +249,8 @@ class DB(object):
         stats = self.get_image_stats(source)
 
         image = Image(filename, title, description, buffer(source), buffer(numpy.asarray(stats['edge_map']).tostring()),
-            buffer(numpy.asarray(stats['hist']).tostring()), stats['hash'], stats['width'], stats['height'], stats['mode'], stats['format'])
+            buffer(numpy.asarray(stats['hist']).tostring()), stats['hash'], stats['width'], stats['height'], stats['mode'],
+            stats['format'] if stats['format'] != None else 'JPEG' )
 
         if video != None: image.video.append(video)
         self.session.add(image)        
@@ -267,6 +275,10 @@ class DB(object):
             self.session.commit()
 
         return {'id':video.id, 'video':video}
+
+    def delete_video(self, video):
+        self.session.delete(video)
+        return video.id
 
     def delete_image(self, id):
         image = self.session.query(Image).filter(Image.id == int(id)).all()[0]
@@ -305,6 +317,9 @@ class DB(object):
     def get_all_images(self):
         return self.session.query(Image).all()
 
+    def get_all_videos(self):
+        return self.session.query(Video).all()
+
 
     def search_by_image(self, source):
         stats  = self.get_image_stats(source)
@@ -316,9 +331,12 @@ class DB(object):
         keywords = sorted([self.get_keyword(keyword)[0] for keyword in self.get_keywords(allkeywords) if self.get_keyword(keyword) != []],
                             key = lambda keyword: keyword.frequency, reverse = True)
         images = []
-        images.extend([image for keyword in keywords for image in keyword.images if image not in images])
+        videos = []
 
-        return images
+        images.extend([image for keyword in keywords for image in keyword.images if image not in images])
+        videos.extend([image.video for image in images if len(image.video) > 0])
+
+        return {'images':images, 'videos':videos}
 
 
 
