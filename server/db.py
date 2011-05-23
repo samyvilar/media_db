@@ -9,6 +9,23 @@ import numpy
 import os
 import shutil
 
+def get_levenshtein(a, b):
+    n, m = len(a), len(b)
+    if n > m:
+        a, b = b, a
+        n, m = m, n
+    current = range(n+1)
+    for i in range(1,m+1):
+        previous, current = current, [i]+[0]*n
+        for j in range(1,n+1):
+            add, delete = previous[j]+1, current[j-1]+1
+            change = previous[j - 1]
+            if a[j-1] != b[i-1]:
+                change = change + 1
+            current[j] = min(add, delete, change)
+    return current[n]
+
+
 class Video(object):
     def __init__(self, filename, source, length, width, height, fps, format, codec):
         self.filename       = filename
@@ -209,8 +226,14 @@ class DB(object):
         return [keyword for keyword in keywords if keyword != '']
 
 
-    def get_keyword(self, keyword):
-        return self.session.query(Keyword).filter(Keyword.keyword == keyword.lower()).all()
+    def find_nearest_keyword(self, keyword, edit_distance):
+        if edit_distance == 0 or len(self.session.query(Keyword).all()) == 0: return keyword
+        else:
+            values = sorted(self.session.query(Keyword).all(), key = lambda keyword_obj: get_levenshtein(keyword_obj.keyword, keyword))            
+            return values[0].keyword if get_levenshtein(values[0].keyword, keyword) <= edit_distance else keyword
+        
+    def get_keyword(self, keyword, edit_distance = 0):
+        return self.session.query(Keyword).filter(Keyword.keyword == self.find_nearest_keyword(keyword.lower(), edit_distance)).all()
 
 
     def add_keyword(self, keyword, image):
@@ -238,7 +261,6 @@ class DB(object):
         keywords.extend(self.get_keywords(image.description))
         
         for keyword in keywords: self.add_keyword(keyword, image)
-
         
         return len(keywords)            
 
@@ -327,8 +349,8 @@ class DB(object):
         return sorted(images, key = lambda image: numpy.sum(abs(numpy.asarray(stats['edge_map']) - numpy.fromstring(image.edge_map, dtype = 'int'))))
 
 
-    def search_by_keywords(self, allkeywords):
-        keywords = sorted([self.get_keyword(keyword)[0] for keyword in self.get_keywords(allkeywords) if self.get_keyword(keyword) != []],
+    def search_by_keywords(self, allkeywords, edit_distance = 10):
+        keywords = sorted([self.get_keyword(keyword, edit_distance)[0] for keyword in self.get_keywords(allkeywords) if self.get_keyword(keyword, edit_distance) != []],
                             key = lambda keyword: keyword.frequency, reverse = True)
         images = []
         videos = []
@@ -347,13 +369,13 @@ class DB(object):
 
         return {'images':images, 'videos':videos}
 
-
-
+    def search(self, keywords, max_edit, image):
+        if image == '' and keywords == '':
+            return {'images':self.get_all_images(), 'video':self.get_all_videos()}
+        elif image == '' and keywords != '':
+            return self.search_by_keywords(keywords, max_edit)
+        elif image != '' and keywords == '':
+            return self.search_by_image(image)
         
-
-
         
     
-
-
-        

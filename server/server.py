@@ -214,6 +214,7 @@ def get_all_videos():
     return {'videos':[get_video_dict(video) for video in videos]}
 ################################################################################
 
+
 @post('/search_by_image')
 def search_by_image():    
     source = request.files.get('source', '')
@@ -241,6 +242,29 @@ def search_by_keyword():
         return {'videos':[get_video_dict(video) for video in results['videos']], 'images':[get_image_dict(image) for image in results['images']]}
     except Exception as ex:
         return {'exception':str(ex)}
+
+@post('/search_by_keyword_image')
+def search_by_keyword_image():
+    keywords            = request.forms.get('keyword', '')
+    filename, source    = get_file_name_source(request)
+    max_edit_distance   = request.forms.get('max_edit_distance', '')
+
+    if max_edit_distance == '':
+        max_edit_distance = 10
+    else:
+        try:
+            max_edit_distance = int(max_edit_distance)
+        except Exception as ex:
+            max_edit_distance = 10
+
+    if filename == '':
+        try:
+            results = db.search(keywords, max_edit_distance, source)
+            return {'videos':[get_video_dict(video) for video in results['videos']], 'images':[get_image_dict(image) for image in results['images']]}
+        except Exception as ex:
+            return {'exception':str(ex)}
+
+
 
 @post('/add_video')
 def add_video():

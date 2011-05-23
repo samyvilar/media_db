@@ -75,19 +75,24 @@
 
       </script>
 
-      <form method="get" action="/search_by_keyword" />
-      Search using keywords <input type="text" name="keyword" id="keyword" />
-        <input type="button" onclick="search_keywords()" value="search" />
-      </form>
+    <table>
+        <tr><td>
+          <form id="file_upload_form" method="post" action="/search_by_keyword_image" enctype="multipart/form-data">
+          Keywords <input type="text" name="keyword" id="keyword" />
+          Max Edit Dist <input type="text" name="max_edit_distance"  size="2"/>
+         </td>
 
+         <td><input type="range" /></td>
 
-      <br><br>
+         <td>
 
-      <form id="file_upload_form" method="post" action="/search_by_image" enctype="multipart/form-data" />
-        Search using an image <input type="file" name="source" />
+        Image: <input type="file" name="source" />
         <input type="submit" value="search" />
-        <iframe id="upload_target" name="upload_target" src="" style="display:none;"></iframe>
-      </form>
+        </form>
+        <iframe id="upload_target" name="upload_target" src="" style="display:none;"></iframe>      
+
+      </td></tr>
+    </table>
 
       <script type="text/javascript">
         function init() {
@@ -103,7 +108,6 @@
                     {
                         try
                         {
-
                             var obj = jQuery.parseJSON(retval);
                             display_search_videos(obj);
                             display_search_images(obj);
